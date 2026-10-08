@@ -26,7 +26,7 @@ float UABCharacterStatComponent::ApplyDamage(float InDamage)
 	const float PrevHp = CurrentHP;
 	const float ActualDamage = FMath::Clamp<float>(InDamage, 0, InDamage); // 음수방지
 
-	// 대미지 를 적용한 새 HP 계산(현재피 - 데미지값)
+	// 대미지를 적용한 새 HP 계산(현재피 - 데미지값)
 	SetHP(PrevHp - ActualDamage);
 
 	// HP가 모두 소멸되었는지 확인. KINDA_SMALL_NUMBER: 0에 가까운 수

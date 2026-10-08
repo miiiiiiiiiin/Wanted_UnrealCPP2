@@ -1,16 +1,23 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "Character/ABCharacterBase.h"
 #include "ABCharacterControlData.h"
 #include "ABComboActionData.h"
-#include <GameFramework/CharacterMovementComponent.h>
-#include <Components/CapsuleComponent.h>
-#include <Physics/ABCollision.h>
-#include <Engine/DamageEvents.h>
 #include <CharacterStat/ABCharacterStatComponent.h>
+#include <Physics/ABCollision.h>
 #include <UI/ABWidgetComponent.h>
 #include <UI/ABHpBarWidget.h>
+#include <Item/ABItemData.h>
+#include <Item/ABWeaponItemData.h>
+
+#include <Engine/DamageEvents.h>
+#include <Components/CapsuleComponent.h>
+#include <GameFramework/CharacterMovementComponent.h>
+#include <Components/SkeletalMeshComponent.h>
+
+// 커스텀 로그 카태ㅔ고리 정의
+DEFINE_LOG_CATEGORY(LogABCharcter);
 
 // Sets default values
 AABCharacterBase::AABCharacterBase()
@@ -109,6 +116,26 @@ AABCharacterBase::AABCharacterBase()
 		// 콜리전 끄기
 		HpBar->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	}
+
+	// 아이템 종류별로 실행할 처리 로직을 델리게이트 배열에 추가
+	// w = 0 p = 1 s = 2
+	TakeItemActions.Add(FOnTakeItemDelegate::CreateUObject(
+		this,
+		&AABCharacterBase::EquipWeapon
+	));
+	TakeItemActions.Add(FOnTakeItemDelegate::CreateUObject(
+		this,
+		&AABCharacterBase::DrinkPotion
+	));
+	TakeItemActions.Add(FOnTakeItemDelegate::CreateUObject(
+		this,
+		&AABCharacterBase::ReadScroll
+	));
+
+	// 스켈레탈 메시 컴포넌트
+	Weapon = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Weapon"));
+	Weapon->SetupAttachment(GetMesh(), TEXT("hand_rSocket"));
+
 }
 
 void AABCharacterBase::PostInitializeComponents()
@@ -402,6 +429,45 @@ void AABCharacterBase::AttackHitCheck()
 		);
 
 #endif
+}
+
+void AABCharacterBase::TakeItem(UABItemData* InItemData)
+{
+	// 아이템 유효성 확인
+	if (InItemData)
+	{
+		// 아이템 인덱스
+		uint8 ItemIndex = (uint8)InItemData->Type;
+
+		// 델리게이트를 통해서 함수 호출
+		TakeItemActions[ItemIndex].ExecuteIfBound(InItemData);
+	}
+}
+
+void AABCharacterBase::DrinkPotion(UABItemData* InItemData)
+{
+	// 로그 출력
+	UE_LOG(LogABCharcter, Log, TEXT("Drink Potion"));
+}
+
+void AABCharacterBase::EquipWeapon(UABItemData* InItemData)
+{
+	//UE_LOG(LogABCharcter, Log, TEXT("Equip Weapon"));
+
+	// 수집한 아이템으로부터 무기스켈레탈 메시 에셋을 불러와 설정
+	UABWeaponItemData* WeaponItemData =
+		Cast<UABWeaponItemData>(InItemData);
+	if (WeaponItemData)
+	{
+		Weapon->SetSkeletalMesh(WeaponItemData->WeaponMesh);
+	}
+
+}
+
+void AABCharacterBase::ReadScroll(UABItemData* InItemData)
+{
+	UE_LOG(LogABCharcter, Log, TEXT("Read Scroll"));
+
 }
 
 void AABCharacterBase::SetupCharacterWidget(UABUserWidget* InUserWidget)

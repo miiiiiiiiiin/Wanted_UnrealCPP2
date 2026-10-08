@@ -3,9 +3,11 @@
 
 #include "Gimmick/ABStageGimmick.h"
 #include <Physics/ABCollision.h>
+#include <Character/ABCharacterNonPlayer.h>
 
 #include <Components/StaticMeshComponent.h>
 #include <Components/BoxComponent.h>
+#include <Engine/OverlapResult.h>
 
 // Sets default values
 AABStageGimmick::AABStageGimmick()
@@ -88,6 +90,36 @@ AABStageGimmick::AABStageGimmick()
 		// 배열에 추가
 		GateTriggers.Add(GateTrigger);
 	}
+	// 시작 상태 설정
+	CurrentState = EStageState::Ready;
+
+	// 상태에 따른 로직 분기를 위한 델리게이트 맵 구성
+	StateChangeActions.Add(EStageState::Ready, FOnStageChangedDelegate::CreateUObject(
+		this, &AABStageGimmick::SetReady
+	));
+	StateChangeActions.Add(EStageState::Fight, FOnStageChangedDelegate::CreateUObject(
+		this, &AABStageGimmick::SetFight
+	));
+	StateChangeActions.Add(EStageState::Reward, FOnStageChangedDelegate::CreateUObject(
+		this, &AABStageGimmick::SetChooseReward
+	));
+	StateChangeActions.Add(EStageState::Next, FOnStageChangedDelegate::CreateUObject(
+		this, &AABStageGimmick::SetChooseNext
+	));
+
+	// npc 생성 대기시간
+	OpponentSpawnTime = 2.0f;
+
+	// npc 생성에 사용할 타입(클래스) 설정
+	OpponentClass = AABCharacterNonPlayer::StaticClass();
+
+}
+
+void AABStageGimmick::OnConstruction(const FTransform& Transform)
+{
+	Super::OnConstruction(Transform);
+
+	SetState(CurrentState);
 }
 
 void AABStageGimmick::OnStageTriggerBeginOverlap(
@@ -98,6 +130,9 @@ void AABStageGimmick::OnStageTriggerBeginOverlap(
 	bool bFromSweep, 
 	const FHitResult& SweepResult)
 {
+	// 스테이지 진입하면 대전 상태로 진입
+	SetState(EStageState::Fight);
+
 }
 
 void AABStageGimmick::OnGateTriggerBeginOverlap(
@@ -108,6 +143,168 @@ void AABStageGimmick::OnGateTriggerBeginOverlap(
 	bool bFromSweep, 
 	const FHitResult& SweepResult)
 {
+	// 한쪽문열리면 거기 방향에다가 맵생성..
+	// 오버랩된 게이트에서 태그 확인
+	FName ComponentTag = OverlappedComponent->ComponentTags[0];
+
+	// 컴포넌트 태그 값에서 앞에 두 글자만 자르기
+	// +XGate 에서 +X만갖다쓰기
+	FName SocketName = *ComponentTag.ToString().Left(2);
+
+	// 값 확인(스테이지 메시에 소켓이 있는지 확인)
+	ensureAlways(Stage->DoesSocketExist(SocketName));
+
+	// 생성할 위치(소켓 이름을 기준으로 생성 위치 가져오기)
+	FVector NewLocation = Stage->GetSocketLocation(SocketName);
+
+	// 충돌 결과를 전달받을 변수
+	TArray<FOverlapResult> OverlapResults;
+
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(GateTrigger), false, this);
+
+	// 지나온 위치는 다시 못 가도록 확인
+	// 이미 스테이지 액터가 생성되어있을때 재차생성방지
+	bool Result = GetWorld()->OverlapMultiByObjectType(
+		OverlapResults,
+		NewLocation,
+		FQuat::Identity,
+		FCollisionObjectQueryParams::InitType::AllStaticObjects,
+		FCollisionShape::MakeSphere(775.0f),
+		Params
+	);
+
+	if (!Result)
+	{
+		// 스테이지 액터 생성
+		GetWorld()->SpawnActor<AABStageGimmick>(NewLocation, FRotator::ZeroRotator);
+	}
+
+}
+
+void AABStageGimmick::SetState(EStageState InNewState)
+{
+	// 현재 상태 업데이트
+	CurrentState = InNewState;
+
+	// 관련 델리게이트 호출
+	// 맵에 포함되어있는지 확인
+	if (StateChangeActions.Contains(InNewState))
+	{
+		StateChangeActions[InNewState].ExecuteIfBound();
+	}
+}
+
+void AABStageGimmick::SetReady()
+{
+	// 가운데 트리거(스테이지 트리거) 활성화
+	StageTrigger->SetCollisionProfileName(CPROFILE_ABTRIGGER);
+	// 게이트와는 상호작용하지 않도록 트리거 끄기
+	for (auto GateTrigger : GateTriggers)
+	{
+		GateTrigger->SetCollisionProfileName(CPROFILE_NOCOLLISION);
+	}
+
+	// 들어올 수 있게 문 열기.
+	OpenAllGates();
+}
+
+void AABStageGimmick::SetFight()
+{
+	// 대전단계
+	// 가운데 트리거(스테이지 트리거) 끄기
+	StageTrigger->SetCollisionProfileName(CPROFILE_NOCOLLISION);
+	// 게이트와는 상호작용하지 않도록 트리거 끄기
+	for (auto GateTrigger : GateTriggers)
+	{
+		GateTrigger->SetCollisionProfileName(CPROFILE_NOCOLLISION);
+	}
+	// 문닫기
+	CloseAllGates();
+
+	// npc 생성
+	GetWorld()->GetTimerManager().SetTimer(
+		OpponentTimerHandle,
+		FTimerDelegate::CreateUObject(
+			this, &AABStageGimmick::OnOpponentSpawn),
+		OpponentSpawnTime,
+		false
+	);
+}
+
+void AABStageGimmick::SetChooseReward()
+{
+	// 아이템박스배치, 선택...
+	// 가운데 트리거(스테이지 트리거) 끄기
+	StageTrigger->SetCollisionProfileName(CPROFILE_NOCOLLISION);
+	// 게이트와는 상호작용하지 않도록 트리거 끄기
+	for (auto GateTrigger : GateTriggers)
+	{
+		GateTrigger->SetCollisionProfileName(CPROFILE_NOCOLLISION);
+	}
+	// 문닫기
+	CloseAllGates();
+}
+
+void AABStageGimmick::SetChooseNext()
+{
+	// 가운데 트리거(스테이지 트리거) 끄기
+	StageTrigger->SetCollisionProfileName(CPROFILE_NOCOLLISION);
+
+	// 게이트와는 상호작용하지 않도록 콜리전 끄기
+	for (auto GateTrigger : GateTriggers)
+	{
+		GateTrigger->SetCollisionProfileName(CPROFILE_ABTRIGGER);
+	}
+	// 문열기 -> 다른 스테이지로 이동.
+	OpenAllGates();
+}
+
+void AABStageGimmick::OpenAllGates()
+{
+	// 게이트 컴포넌트 맵을 순회하면서 회전 설정
+	for (auto Gate : Gates)
+	{
+		Gate.Value->SetRelativeRotation(FRotator(0.0f, -90.0f, 0.0f));
+	}
+}
+
+void AABStageGimmick::CloseAllGates()
+{
+	// 게이트 컴포넌트 맵을 순회하면서 회전 설정
+	for (auto Gate : Gates)
+	{
+		Gate.Value->SetRelativeRotation(FRotator::ZeroRotator);
+	}
+}
+
+void AABStageGimmick::OnOpponentDestroyed(AActor* DestroyedActor)
+{
+	// NPC가 죽으면 보상 단계로 전환
+	SetState(EStageState::Reward);
+}
+
+void AABStageGimmick::OnOpponentSpawn()
+{
+	// NPC 생성위치
+	const FVector SpawnLocation = GetActorLocation() + FVector::UpVector * 88.0f;
+
+	// NPC 액터 생성
+	AActor* OpponentActor = GetWorld()->SpawnActor(
+		OpponentClass,
+		&SpawnLocation,
+		&FRotator::ZeroRotator
+	);
+
+	// 액터 타입 확인
+	AABCharacterNonPlayer* AABOppnentCharacter = 
+		Cast<AABCharacterNonPlayer>(OpponentActor);
+	if (AABOppnentCharacter)
+	{
+		// NPC가 죽었을 때 실행될 델리게이트 등록
+		OpponentActor->OnDestroyed.AddDynamic(
+			this, &AABStageGimmick::OnOpponentDestroyed
+		);
+	}
 }
 
 

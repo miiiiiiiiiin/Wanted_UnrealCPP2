@@ -6,6 +6,19 @@
 #include "GameFramework/Actor.h"
 #include "ABStageGimmick.generated.h"
 
+// 스테이지 상태를 나타내는 열거형 선언
+UENUM(BlueprintType)
+enum class EStageState : uint8
+{
+	Ready = 0,
+	Fight, 
+	Reward,
+	Next
+};
+
+// 상태에 따른 처리를 위해 델리게이트 선언
+DECLARE_DELEGATE(FOnStageChangedDelegate)
+
 UCLASS()
 class ARENABATTLE_API AABStageGimmick : public AActor
 {
@@ -15,6 +28,9 @@ public:
 	// Sets default values for this actor's properties
 	AABStageGimmick();
 
+protected:
+	// 액터의 상태가 변경될 떄 엔진에서 호출해주는 함수
+	virtual void OnConstruction(const FTransform& Transform) override;
 
 	// 스테이지 관련 변수/함수
 protected:
@@ -56,4 +72,46 @@ protected:
 		bool bFromSweep,
 		const FHitResult& SweepResult
 	);
+
+	// 스테이지
+protected:
+	// 현재 상태를 나타내는 열거형 선언
+	UPROPERTY(EditAnywhere, Category = Stage, meta = (AllowPrivateAccess = "true"))
+	EStageState CurrentState;
+
+	// 새로운 상태를 설정할 때 사용할 함수
+	void SetState(EStageState InNewState);
+
+	// 상태에 따른 처리 분기를 위해 열거형 - 델리게이트 조합으로 관리.
+	TMap<EStageState, FOnStageChangedDelegate> StateChangeActions;
+
+	// 상태 변경에 따른 처리 함수
+	void SetReady();
+	void SetFight();
+	void SetChooseReward();
+	void SetChooseNext();
+
+	// 4개의 문을 여닫는 함수
+	void OpenAllGates();
+	void CloseAllGates();
+
+	// 대전 처리
+protected:
+	// 캐릭터와 싸울 Npc캐릭터 클래스 타입
+	UPROPERTY(EditAnywhere, Category = Fight, meta = (AllowPrivateAccess = "true"))
+	TSubclassOf<class AABCharacterNonPlayer> OpponentClass;
+
+	// NPC 생성하기까지 대기할 시간
+	UPROPERTY(EditAnywhere, Category = Fight, meta = (AllowPrivateAccess = "true"))
+	float OpponentSpawnTime;
+
+	// NPC가 죽었을 때(Destroy 되었을 때) 발생하는 델리게이트에 등록할 함수
+	UFUNCTION()
+	void OnOpponentDestroyed(AActor* DestroyedActor);
+
+	// 타이머 핸들
+	FTimerHandle OpponentTimerHandle;
+
+	// 타이머 종료 후에 npc 생성에 사용할 함수
+	void OnOpponentSpawn();
 };

@@ -39,6 +39,11 @@ public:
 	{
 		ModifierStat = InModifierStat;
 	}
+	// 총 스탯 반환
+	FORCEINLINE FABCharacterStat GetTotalStat()
+	{
+		return BaseStat + ModifierStat;
+	}
 
 
 

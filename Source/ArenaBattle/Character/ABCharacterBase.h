@@ -36,6 +36,11 @@ public:
 	// Sets default values for this character's properties
 	AABCharacterBase();
 
+// 스탯
+public:
+	int32 GetLevel();
+	void SetLevel(int32 InNewLevel);
+
 protected:
 	// 컴포넌트 초기화가 끝났을 떄 호출되는 함수
 	// 즉 액터의 초기화가 끝난 시점
@@ -140,9 +145,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Equipment, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class USkeletalMeshComponent> Weapon;
 
-
 	// 아이템 수집처리에 사용할 델리게이트 배열
 	TArray<FOnTakeItemDelegate> TakeItemActions;
+
 
 
 

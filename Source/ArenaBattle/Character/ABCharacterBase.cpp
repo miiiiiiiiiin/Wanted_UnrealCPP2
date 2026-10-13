@@ -295,7 +295,8 @@ void AABCharacterBase::SetComboCheckTimer()
 	);
 
 	// 애니메이션 재생 속도
-	const float AttackSpeedRate = 1.0f;
+	//const float AttackSpeedRate = 1.0f;
+	const float AttackSpeedRate = Stat->GetTotalStat().AttackSpeed;
 
 	// 콤보 공격 입력 시간(초단위) 계산 => 17 / 30
 	float ComboEffectTime = (ComboAttackData->EffectiveFrameCount[ComboIndex] 
@@ -364,7 +365,9 @@ void AABCharacterBase::AttackHitCheck()
 	FCollisionQueryParams Params(SCENE_QUERY_STAT(Attack), false, this);
 
 	// 공격 범위
-	const float AttackRange = 30.0f;
+	//const float AttackRange = 30.0f;
+	const float AttackRange = Stat->GetTotalStat().AttackRange;
+
 
 	// 트레이스에 사용할 구체의 반지름
 	const float AttackRadius = 50.0f;
@@ -388,7 +391,8 @@ void AABCharacterBase::AttackHitCheck()
 	if (HitDetected)
 	{
 		// 전달할 대미지
-		const float AttackDamage = 200.0f;
+		//const float AttackDamage = 200.0f;
+		const float AttackDamage = Stat->GetTotalStat().Attack;
 
 		// 대미지 이벤트 변수
 		FDamageEvent DamageEnvent;
@@ -431,6 +435,16 @@ void AABCharacterBase::AttackHitCheck()
 #endif
 }
 
+int32 AABCharacterBase::GetLevel()
+{
+	return Stat->GetCurrentLevel();
+}
+
+void AABCharacterBase::SetLevel(int32 InNewLevel)
+{
+	Stat->SetLevelStat(InNewLevel);
+}
+
 void AABCharacterBase::TakeItem(UABItemData* InItemData)
 {
 	// 아이템 유효성 확인
@@ -467,6 +481,9 @@ void AABCharacterBase::EquipWeapon(UABItemData* InItemData)
 		}
 
 		Weapon->SetSkeletalMesh(WeaponItemData->WeaponMesh.Get());
+
+		// 무기 아이템이 제공하는 부가 스탯 적용
+		Stat->SetModifierStat(WeaponItemData->ModifierStat);
 	}
 
 }
@@ -483,8 +500,8 @@ void AABCharacterBase::SetupCharacterWidget(UABUserWidget* InUserWidget)
 	UABHpBarWidget* HpBarWidget = Cast<UABHpBarWidget>(InUserWidget);
 	if (HpBarWidget)
 	{
-		// 데이터 설정
-		HpBarWidget->SetMaxHp(Stat->GetMaxHP());
+		// 데이터 설정(최종스탯에서 가져오기)
+		HpBarWidget->SetMaxHp(Stat->GetTotalStat().MaxHp);
 		HpBarWidget->UpdataHpBar(Stat->GetCurrentHp());
 
 		// 델리게이트 등록

@@ -19,7 +19,7 @@ AABCharacterNonPlayer::AABCharacterNonPlayer()
 	// 애님 블루프린트 클래스 검색 및 설정.
 	// /Game/Characters/Mannequins/Anims/Unarmed/ABP_Unarmed.ABP_Unarmed
 	static ConstructorHelpers::FClassFinder<UAnimInstance> CharacterAnim(
-		TEXT("/Game/ArenaBattle/Animation/ABP_ABCharacter.ABP_ABCharacter_C")
+		TEXT("/Game/ArenaBattle/Animation/ABP_ABCharacter1.ABP_ABCharacter1_C")
 	);
 
 	// 검색에 성공하면 클래스 정보 설정.
@@ -92,4 +92,24 @@ void AABCharacterNonPlayer::NPCMeshLoadCompleted()
 
 	// 사용한 핸들 해제
 	NPCMeshHandle->ReleaseHandle();
+}
+
+float AABCharacterNonPlayer::GetAIPatrolRadius()
+{
+	return 500.0f;
+}
+
+float AABCharacterNonPlayer::GetAIDetectRange()
+{
+	return 0.0f;
+}
+
+float AABCharacterNonPlayer::GetAIAttackRange()
+{
+	return 0.0f;
+}
+
+float AABCharacterNonPlayer::GetAITurnSpeed()
+{
+	return 0.0f;
 }

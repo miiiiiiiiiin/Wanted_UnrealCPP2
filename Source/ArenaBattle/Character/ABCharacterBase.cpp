@@ -282,6 +282,9 @@ void AABCharacterBase::ComboActionEnded(UAnimMontage* TargetMontage, bool bInter
 
 	// 몽타주 재생이 종료되면 캐릭터 이동 복구
 	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
+
+	// 공격 끝나는 시점을 알 수 있도록 가상 함수 호출
+	NotifyComboActionEnd();
 }
 
 void AABCharacterBase::SetComboCheckTimer()
@@ -370,7 +373,8 @@ void AABCharacterBase::AttackHitCheck()
 
 
 	// 트레이스에 사용할 구체의 반지름
-	const float AttackRadius = 50.0f;
+	//const float AttackRadius = 50.0f;
+	const float AttackRadius = Stat->GetAttackRadius();
 
 	// 트레이스 시작 위치
 	// 액터 위치 + 캡슐 높이의 반지름만큼 앞으로 떨어진 위치.
@@ -387,6 +391,7 @@ void AABCharacterBase::AttackHitCheck()
 		FCollisionShape::MakeSphere(AttackRadius),
 		Params
 	);
+
 	// 충돌이 감지되면 대미지 전달
 	if (HitDetected)
 	{

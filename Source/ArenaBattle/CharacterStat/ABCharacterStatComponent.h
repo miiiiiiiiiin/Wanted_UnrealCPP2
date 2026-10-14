@@ -11,6 +11,12 @@
 DECLARE_MULTICAST_DELEGATE(FOnHPZeroDelegate);
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnHPChangedDelegate, float /*CurrentHP*/);
 
+// 스탯 정보가 변경되었을 때 발행할 델리게이트
+DECLARE_MULTICAST_DELEGATE_TwoParams(
+	FOnStatChangeDelegate,
+	const FABCharacterStat& /*InBaseStat*/,
+	const FABCharacterStat& /*InModifierStat*/
+);
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class ARENABATTLE_API UABCharacterStatComponent : public UActorComponent
@@ -23,7 +29,8 @@ public:
 
 protected:
 	// Called when the game starts
-	virtual void BeginPlay() override;
+	//virtual void BeginPlay() override;
+	virtual void InitializeComponent() override;
 
 public:
 	// Getter
@@ -34,20 +41,37 @@ public:
 	// 현재 레벨 반환
 	FORCEINLINE int32 GetCurrentLevel() const { return CurrentLevel; }
 
+	// 기본 스탯 데이터 설정 함수
+	FORCEINLINE void SetBaseStat(const FABCharacterStat& InBaseStat)
+	{
+		BaseStat = InBaseStat;
+
+		// 스탯 정보 변경 델리게이트 호출
+		OnStatChanged.Broadcast(BaseStat, ModifierStat);
+	}
+
 	// 부가 스탯 데이터 설정 함수
 	FORCEINLINE void SetModifierStat(const FABCharacterStat& InModifierStat)
 	{
 		ModifierStat = InModifierStat;
+
+		// 스탯 정보 변경 델리게이트 호출
+		OnStatChanged.Broadcast(BaseStat, ModifierStat);
 	}
+
+	FORCEINLINE const FABCharacterStat& GetBaseStat() const { return BaseStat; }
+	FORCEINLINE const FABCharacterStat& GetModifierStat() const { return ModifierStat; }
+
 	// 총 스탯 반환
 	FORCEINLINE FABCharacterStat GetTotalStat()
 	{
 		return BaseStat + ModifierStat;
 	}
 
-
-
 	FORCEINLINE float GetCurrentHp() const { return CurrentHP; }
+
+	// 공격 반경 반환
+	FORCEINLINE float GetAttackRadius() const { return AttackRadius; }
 
 	// 대미지 적용 함수(setter)
 	float ApplyDamage(float InDamage);
@@ -63,6 +87,9 @@ public:
 	// 체력이 변경될 때 발행할 델리게이트 선언
 	FOnHPChangedDelegate OnHpChanged;
 
+	// 스탯 정보가 변경될 때 발행할 델리게이트
+	FOnStatChangeDelegate OnStatChanged;
+
 protected:	
 	// 기존에 임시로 사용하던 속성 제거
 	// 최대 체력 값
@@ -77,6 +104,10 @@ protected:
 	// 캐릭터 레벨
 	UPROPERTY(VisibleInstanceOnly, Category = Stat)
 	int32 CurrentLevel;
+
+	// 공격 반경 
+	UPROPERTY(VisibleInstanceOnly, Category = Stat)
+	float AttackRadius;
 
 	// 캐릭터의 기본 스탯 데이터
 	UPROPERTY(Transient, VisibleInstanceOnly, Category = Stat)

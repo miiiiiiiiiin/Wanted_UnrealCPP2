@@ -12,19 +12,31 @@ UABCharacterStatComponent::UABCharacterStatComponent()
 
 	// 현재 레벨 설정
 	CurrentLevel = 1;
+
+	// 공격 반경 기본값 설정
+	AttackRadius = 50.0f;
+
+	bWantsInitializeComponent = true;
 }
 
 
 // Called when the game starts
-void UABCharacterStatComponent::BeginPlay()
-{
-	Super::BeginPlay();
+//void UABCharacterStatComponent::BeginPlay()
+//{
+//	Super::BeginPlay();
+//
+//	//SetHP(MaxHP);
+//
+//	
+//}
 
-	//SetHP(MaxHP);
+void UABCharacterStatComponent::InitializeComponent()
+{
+	Super::InitializeComponent();
+
 	SetLevelStat(CurrentLevel);
 	SetHP(BaseStat.MaxHp);
 
-	
 }
 
 void UABCharacterStatComponent::SetLevelStat(int32 InNewLevel)
@@ -33,7 +45,8 @@ void UABCharacterStatComponent::SetLevelStat(int32 InNewLevel)
 	CurrentLevel = FMath::Clamp(InNewLevel, 1, UABGameSingleton::Get().CharacterMaxLevel);
 
 	// 게임 싱글톤에 접근해서 레벨에 해당하는 스탯 데이터 설정
-	BaseStat = UABGameSingleton::Get().GetCharacterStat(CurrentLevel);
+	//BaseStat = UABGameSingleton::Get().GetCharacterStat(CurrentLevel);
+	SetBaseStat(UABGameSingleton::Get().GetCharacterStat(CurrentLevel));
 
 	// 값에 문제가 없는지 확인
 	ensureAlways(BaseStat.MaxHp > 0.0f);

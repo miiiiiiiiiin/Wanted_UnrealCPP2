@@ -1,8 +1,8 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "Character/ABCharacterNonPlayer.h"
 #include <AI/ABAIController.h>
+#include <CharacterStat/ABCharacterStatComponent.h>
 #include <Engine/AssetManager.h>
 
 AABCharacterNonPlayer::AABCharacterNonPlayer()
@@ -101,15 +101,40 @@ float AABCharacterNonPlayer::GetAIPatrolRadius()
 
 float AABCharacterNonPlayer::GetAIDetectRange()
 {
-	return 0.0f;
+	return 400.0f;
 }
 
 float AABCharacterNonPlayer::GetAIAttackRange()
 {
-	return 0.0f;
+	// 스탯의 공격 거리(??) + 공격 반경을 지름으로 계산해서 최종 공격 가능 거리 판단
+	return Stat->GetTotalStat().AttackRange + Stat->GetAttackRadius() * 2.0f;
 }
 
 float AABCharacterNonPlayer::GetAITurnSpeed()
 {
-	return 0.0f;
+	return 2.0f;
+}
+
+void AABCharacterNonPlayer::AttackByAI()
+{
+	// 공격 실행
+	ProcessComboCommand();
+
+	// 공격 끝나는 시점을 알 필요가 있음
+
+}
+
+void AABCharacterNonPlayer::SetAIAttackDelegate(const FAICharacterAttackFinished& InOnAttackFinished)
+{
+	// 델리게이트에 전달된 로직 저장.
+	OnAttackFinished = InOnAttackFinished;
+
+}
+
+void AABCharacterNonPlayer::NotifyComboActionEnd()
+{
+	Super::NotifyComboActionEnd();
+
+	// 공격 종료를 알리는 델리게이트 호출
+	OnAttackFinished.ExecuteIfBound();
 }

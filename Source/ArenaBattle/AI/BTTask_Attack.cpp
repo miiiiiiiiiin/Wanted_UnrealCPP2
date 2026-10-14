@@ -1,0 +1,48 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+#include "AI/BTTask_Attack.h"
+#include <Interface/ABCharacterAIInterface.h>
+#include <AIController.h>
+#include <BehaviorTree/BlackboardComponent.h>
+
+UBTTask_Attack::UBTTask_Attack()
+{
+    // 노드 이름 설정
+    NodeName = TEXT("Attack");
+}
+
+EBTNodeResult::Type UBTTask_Attack::ExecuteTask(
+    UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
+{
+    EBTNodeResult::Type Result = Super::ExecuteTask(OwnerComp, NodeMemory);
+
+    // 공격을 수행했다는 메시지를 NPC 에 전달. 
+    APawn* ControllingPawn = OwnerComp.GetAIOwner()->GetPawn();
+    if (nullptr == ControllingPawn)
+        return EBTNodeResult::Failed;
+
+    // 메시지 전달을 위해서 인터페이스로 형변환
+    IABCharacterAIInterface* AIPawn = Cast<IABCharacterAIInterface>(ControllingPawn);
+    if(nullptr == AIPawn)
+        return EBTNodeResult::Failed;
+
+    // 공격이 종료될 떄 실행될 로직을 델리게이트로 전달
+    FAICharacterAttackFinished OnAttackFinished;
+
+    // 델리게이트에 로직 바인딩
+    OnAttackFinished.BindLambda([this, &OwnerComp]()
+        {
+            // 공격이 종료되면 최종 태스크 종료.
+            FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
+        }
+    );
+    // NPC 캐릭터에 공격 종료 시 실행할 로직 전달.
+    AIPawn->SetAIAttackDelegate(OnAttackFinished);
+
+    // 공격 메시지 전달
+    AIPawn->AttackByAI();
+
+    // 공격 명령을 실행한 후에 곧바로 종료해도 되는지 알수없음
+    // -> InProgress(진행 중) 반환. 
+    return EBTNodeResult::InProgress;
+}

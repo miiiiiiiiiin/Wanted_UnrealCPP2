@@ -8,8 +8,7 @@
 #include <Physics/ABCollision.h>
 #include <UI/ABWidgetComponent.h>
 #include <UI/ABHpBarWidget.h>
-#include <Item/ABItemData.h>
-#include <Item/ABWeaponItemData.h>
+#include <Item/ABItems.h>
 
 #include <Engine/DamageEvents.h>
 #include <Components/CapsuleComponent.h>
@@ -142,8 +141,14 @@ void AABCharacterBase::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
 
+	// 기본 스탯의 이동 속도 설정
+	ApplyStat(Stat->GetBaseStat(), Stat->GetModifierStat());
+	
 	// 델리게이트에 함수 등록
 	Stat->OnHpZero.AddUObject(this, &AABCharacterBase::SetDead);
+
+	// 스탯 변경 델리게이트에 함수 등록
+	Stat->OnStatChanged.AddUObject(this, &AABCharacterBase::ApplyStat);
 }
 
 float AABCharacterBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
@@ -170,6 +175,9 @@ void AABCharacterBase::SetDead()
 
 	// 콜리전 끄기
 	SetActorEnableCollision(false);
+
+	// HPBar 끄기
+	HpBar->SetHiddenInGame(true);
 }
 
 void AABCharacterBase::PlayDeadAnimation()
@@ -450,6 +458,16 @@ void AABCharacterBase::SetLevel(int32 InNewLevel)
 	Stat->SetLevelStat(InNewLevel);
 }
 
+void AABCharacterBase::ApplyStat(const FABCharacterStat& InBaseStat, 
+	const FABCharacterStat& InModifierStat)
+{
+	// 기본 + 부가 스탯에서 이동 속도 가져오기. 
+	float MovementSpeed = (InBaseStat + InModifierStat).MovementSpeed;
+
+	// 캐릭터 무브먼트 컴포넌트에 설정. 
+	GetCharacterMovement()->MaxWalkSpeed = MovementSpeed;
+}
+
 void AABCharacterBase::TakeItem(UABItemData* InItemData)
 {
 	// 아이템 유효성 확인
@@ -465,8 +483,14 @@ void AABCharacterBase::TakeItem(UABItemData* InItemData)
 
 void AABCharacterBase::DrinkPotion(UABItemData* InItemData)
 {
-	// 로그 출력
-	UE_LOG(LogABCharcter, Log, TEXT("Drink Potion"));
+	// 포션 아이템 데이터로 형변환 후 HP 회복 처리.
+	UABPotionItemData* PotionItemData = Cast< UABPotionItemData>(InItemData);
+	if (nullptr != PotionItemData)
+	{
+		// HP 회복처리(HP를 더해주는 처리)
+		// Stat->setHP
+		Stat->HealHp(PotionItemData->HealAmount);
+	}
 }
 
 void AABCharacterBase::EquipWeapon(UABItemData* InItemData)
@@ -495,8 +519,13 @@ void AABCharacterBase::EquipWeapon(UABItemData* InItemData)
 
 void AABCharacterBase::ReadScroll(UABItemData* InItemData)
 {
-	UE_LOG(LogABCharcter, Log, TEXT("Read Scroll"));
-
+	// 형변환
+	UABScrollItemData* ScrollItemData = Cast<UABScrollItemData>(InItemData);
+	if (nullptr != ScrollItemData)
+	{
+		// 기본 스탯을 더해주는 처리
+		Stat->AddBaseStat(ScrollItemData->BaseStat);
+	}
 }
 
 void AABCharacterBase::SetupCharacterWidget(UABUserWidget* InUserWidget)
@@ -506,7 +535,7 @@ void AABCharacterBase::SetupCharacterWidget(UABUserWidget* InUserWidget)
 	if (HpBarWidget)
 	{
 		// 데이터 설정(최종스탯에서 가져오기)
-		HpBarWidget->SetMaxHp(Stat->GetTotalStat().MaxHp);
+		HpBarWidget->UpdateStat(Stat->GetBaseStat(), Stat->GetModifierStat());
 		HpBarWidget->UpdataHpBar(Stat->GetCurrentHp());
 
 		// 델리게이트 등록
@@ -515,5 +544,9 @@ void AABCharacterBase::SetupCharacterWidget(UABUserWidget* InUserWidget)
 			&UABHpBarWidget::UpdataHpBar
 		);
 
+		Stat->OnStatChanged.AddUObject(
+			HpBarWidget,
+			&UABHpBarWidget::UpdateStat
+		);
 	}
 }

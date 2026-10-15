@@ -41,6 +41,15 @@ public:
 	// 현재 레벨 반환
 	FORCEINLINE int32 GetCurrentLevel() const { return CurrentLevel; }
 
+	// 기본 스탯 더해주는 함수 처리. 
+	FORCEINLINE void AddBaseStat(const FABCharacterStat& InAddBaseStat)
+	{
+		BaseStat = BaseStat + InAddBaseStat;
+
+		// 스탯 변경 이벤트 발생
+		OnStatChanged.Broadcast(BaseStat, ModifierStat);
+	}
+
 	// 기본 스탯 데이터 설정 함수
 	FORCEINLINE void SetBaseStat(const FABCharacterStat& InBaseStat)
 	{
@@ -69,6 +78,15 @@ public:
 	}
 
 	FORCEINLINE float GetCurrentHp() const { return CurrentHP; }
+
+	// HP 를 회복시킬 때 사용할 함수
+	FORCEINLINE void HealHp(float InHealAmount)
+	{
+		CurrentHP = FMath::Clamp(CurrentHP + InHealAmount, 0, GetTotalStat().MaxHp);
+
+		// 델리게이트 호출
+		OnHpChanged.Broadcast(CurrentHP);
+	}
 
 	// 공격 반경 반환
 	FORCEINLINE float GetAttackRadius() const { return AttackRadius; }

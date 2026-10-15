@@ -6,6 +6,7 @@
 #include "GameFramework/Character.h"
 #include <Interface/ABCharacterWidgetInterface.h>
 #include <Interface/ABCharacterItemInterface.h>
+#include <GameData/ABCharacterStat.h>
 #include <Interface/ABAnitaionAttackInterface.h>
 #include "ABCharacterBase.generated.h"
 
@@ -40,6 +41,9 @@ public:
 public:
 	int32 GetLevel();
 	void SetLevel(int32 InNewLevel);
+
+	// 스탯이 변경되었을 때 실행할 함수 - 델리게이트와도 연동. 
+	void ApplyStat(const FABCharacterStat& InBaseStat, const FABCharacterStat& InModifierStat);
 
 protected:
 	// 컴포넌트 초기화가 끝났을 떄 호출되는 함수

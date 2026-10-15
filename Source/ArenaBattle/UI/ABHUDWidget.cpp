@@ -16,7 +16,7 @@ void UABHUDWidget::UpdateStat(
 {
 	// hpbar에 최대 체력 스탯 업데이트
 	FABCharacterStat TotalStat = InBaseStat + InModifierStat;
-	HpBar->SetMaxHp(TotalStat.MaxHp);
+	HpBar->UpdateStat(InBaseStat, InModifierStat);
 
 	// 캐릭터 스탯 위젯에 새로운 데이터 전달
 	CharacterStat->UpdateStat(InBaseStat, InModifierStat);

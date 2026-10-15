@@ -136,10 +136,27 @@ void AABCharacterPlayer::BeginPlay()
 {
 	Super::BeginPlay();
 
+	// 입력 활성화를위해 플레이어 컨트롤러 참조 얻기
+	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	if (nullptr != PlayerController)
+		// 캐릭터 입력되도록 활성화. 
+		EnableInput(PlayerController);
+
 	// 초기 입력 컨트롤 설정
 	SetCharacterControl(CurrentCharacterControlType);
 
 	
+}
+
+void AABCharacterPlayer::SetDead()
+{
+	Super::SetDead();
+
+	// 입력 비활성화를위해 플레이어 컨트롤러 참조 얻기
+	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	if (nullptr!=PlayerController)
+		// 캐릭터가 죽으면 입력되지 않도록 비활성화. 
+		DisableInput(PlayerController);
 }
 
 void AABCharacterPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)

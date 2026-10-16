@@ -3,12 +3,14 @@
 
 #include "Gimmick/ABStageGimmick.h"
 #include <Physics/ABCollision.h>
+#include <Interface/ABGameInterface.h>
 #include <Character/ABCharacterNonPlayer.h>
 #include <Item/ABItemBox.h>
 
 #include <Components/StaticMeshComponent.h>
 #include <Components/BoxComponent.h>
 #include <Engine/OverlapResult.h>
+#include <GameFramework/GameModeBase.h>
 
 // Sets default values
 AABStageGimmick::AABStageGimmick()
@@ -309,6 +311,11 @@ void AABStageGimmick::CloseAllGates()
 
 void AABStageGimmick::OnOpponentDestroyed(AActor* DestroyedActor)
 {
+	// 게임모드에 접근해서 점수 획득 요청. 
+	// 게임 모드에 직접접근 안하고 인터페이스 활용. 
+	IABGameInterface* ABGameMode
+		= Cast<IABGameInterface>(GetWorld()->GetAuthGameMode());
+
 	// NPC가 죽으면 보상 단계로 전환
 	SetState(EStageState::Reward);
 }

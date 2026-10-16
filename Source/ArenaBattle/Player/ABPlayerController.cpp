@@ -26,12 +26,27 @@ void AABPlayerController::BeginPlay()
 	SetInputMode(GameOnlyInputMode);
 
 	// 위젯 생성(소유컨트롤러, 위젯클래스 
-	ABHUDWidget = CreateWidget<UABHUDWidget>(this, ABHUDwidgetClass);
+	//ABHUDWidget = CreateWidget<UABHUDWidget>(this, ABHUDwidgetClass);
 
-	// 문제없이 생성되었다면 화면에 추가
-		if (nullptr != ABHUDWidget)
-		{
-			ABHUDWidget->AddToViewport();
-		}
+	//// 문제없이 생성되었다면 화면에 추가
+	//if (nullptr != ABHUDWidget)
+	//{
+	//	ABHUDWidget->AddToViewport();
+	//}
+
+}
+void AABPlayerController::GameScoreChanged(int32_t NewScore)
+{
+	// 블루프린트에서 구현할 함수가 호출될 수 있도록 처리
+	K2_OnScoreChanged(NewScore);
+
+}
+void AABPlayerController::GameClear()
+{
+	K2_OnGameClear();
+}
+void AABPlayerController::GameOver()
+{
+	K2_OnGameOver();
 
 }
